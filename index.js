@@ -17,11 +17,19 @@ async function run() {
     try {
 
         const appointmentOptions = client.db('aurora-dental-care').collection('appointmentOptions');
+        const bookingCollection = client.db('aurora-dental-care').collection('bookings');
 
         app.get('/appointmentsOptions', async (req, res) => {
             const query = {};
             const result = await appointmentOptions.find(query).toArray();
             res.send(result)
+        })
+
+        app.post('/bookings', async (req, res) => {
+            const booking = req.body;
+            const result = await bookingCollection.insertOne(booking);
+            res.send(result);
+            console.log(result)
         })
 
     }
