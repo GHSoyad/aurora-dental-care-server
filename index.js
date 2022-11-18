@@ -20,9 +20,20 @@ async function run() {
         const bookingCollection = client.db('aurora-dental-care').collection('bookings');
 
         app.get('/appointmentsOptions', async (req, res) => {
+            const date = req.query.date;
             const query = {};
-            const result = await appointmentOptions.find(query).toArray();
-            res.send(result)
+            const options = await appointmentOptions.find(query).toArray();
+            const bookingQuery = { appointmentDate: date };
+            const alreadyBooked = await bookingCollection.find(bookingQuery).toArray();
+
+            options.forEach(option => {
+                const treatmentsBooked = alreadyBooked.filter(booked => booked.treatment === option.name);
+                const slotsBooked = treatmentsBooked.map(booked => booked.appointmentTime);
+                const remainingSlots = option.slots.filter(slot => !slotsBooked.includes(slot))
+                option.slots = remainingSlots;
+                console.log(remainingSlots)
+            })
+            res.send(options)
         })
 
         app.post('/bookings', async (req, res) => {
