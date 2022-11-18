@@ -31,16 +31,27 @@ async function run() {
                 const slotsBooked = treatmentsBooked.map(booked => booked.appointmentTime);
                 const remainingSlots = option.slots.filter(slot => !slotsBooked.includes(slot))
                 option.slots = remainingSlots;
-                console.log(remainingSlots)
             })
             res.send(options)
         })
 
         app.post('/bookings', async (req, res) => {
             const booking = req.body;
+            const query = {
+                userEmail: booking.userEmail,
+                appointmentDate: booking.appointmentDate,
+                treatment: booking.treatment
+            };
+
+            const previousBooking = await bookingCollection.find(query).toArray();
+
+            if (previousBooking.length) {
+                const message = `Already have a booking on ${booking.appointmentDate}`
+                return res.send({ acknowledged: false, message })
+            }
+
             const result = await bookingCollection.insertOne(booking);
             res.send(result);
-            console.log(result)
         })
 
     }
