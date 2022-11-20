@@ -18,6 +18,7 @@ async function run() {
 
         const appointmentOptions = client.db('aurora-dental-care').collection('appointmentOptions');
         const bookingCollection = client.db('aurora-dental-care').collection('bookings');
+        const usersCollection = client.db('aurora-dental-care').collection('users');
 
         app.get('/appointmentsOptions', async (req, res) => {
             const date = req.query.date;
@@ -51,6 +52,19 @@ async function run() {
             }
 
             const result = await bookingCollection.insertOne(booking);
+            res.send(result);
+        })
+
+        app.post('/users', async (req, res) => {
+            const user = req.body;
+            const result = await usersCollection.insertOne(user);
+            res.send(result);
+        })
+
+        app.get('/users', async (req, res) => {
+            const query = {};
+            const cursor = usersCollection.find(query);
+            const result = await cursor.toArray();
             res.send(result);
         })
 
