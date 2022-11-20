@@ -33,7 +33,7 @@ app.get('/jwt', (req, res) => {
     res.send({ token });
 })
 
-const { MongoClient, ServerApiVersion } = require('mongodb');
+const { MongoClient, ServerApiVersion, ObjectId } = require('mongodb');
 const uri = `mongodb+srv://${process.env.DB_USER}:${process.env.DB_PASSWORD}@cluster0.7r6jn89.mongodb.net/?retryWrites=true&w=majority`;
 const client = new MongoClient(uri, { useNewUrlParser: true, useUnifiedTopology: true, serverApi: ServerApiVersion.v1 });
 
@@ -89,6 +89,39 @@ async function run() {
             const query = {};
             const cursor = usersCollection.find(query);
             const result = await cursor.toArray();
+            res.send(result);
+        })
+
+        app.put('/users', async (req, res) => {
+            const user = req.body;
+            console.log(user);
+            const filter = { email: user.email };
+            const options = { upsert: true };
+            const updateUser = {
+                $set: {
+                    name: user.name,
+                    email: user.email
+                }
+            }
+            const result = await usersCollection.updateOne(filter, updateUser, options);
+            res.send(result);
+        })
+
+        app.patch('/users/:id', verifyJWT, async (req, res) => {
+            const email = req.decoded.email;
+            const query = { email: email };
+            const user = await usersCollection.findOne(query);
+            if (user?.role !== 'admin') {
+                return res.status(403).send({ message: "Forbidden Access" })
+            }
+            const id = req.params.id;
+            const filter = { _id: ObjectId(id) };
+            const updateUser = {
+                $set: {
+                    role: 'admin'
+                }
+            }
+            const result = await usersCollection.updateOne(filter, updateUser);
             res.send(result);
         })
 
