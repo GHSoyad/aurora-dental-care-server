@@ -94,7 +94,7 @@ async function run() {
             res.send(result);
         })
 
-        app.get('/users', verifyJWT, async (req, res) => {
+        app.get('/users', verifyJWT, verifyAdmin, async (req, res) => {
             const query = {};
             const cursor = usersCollection.find(query);
             const result = await cursor.toArray();
@@ -135,7 +135,7 @@ async function run() {
             res.send({ isAdmin: result?.role === 'admin' });
         })
 
-        app.post('/doctors', async (req, res) => {
+        app.post('/doctors', verifyJWT, verifyAdmin, async (req, res) => {
             const doctor = req.body;
             const query = { email: doctor.email }
             const checkDoctor = await doctorsCollection.findOne(query);
@@ -146,14 +146,26 @@ async function run() {
             res.send(result);
         })
 
-        app.get('/doctors', async (req, res) => {
+        app.get('/doctors', verifyJWT, verifyAdmin, async (req, res) => {
             const query = {};
             const cursor = doctorsCollection.find(query);
             const result = await cursor.toArray();
             res.send(result);
         })
 
+        app.delete('/doctors/:id', verifyJWT, verifyAdmin, async (req, res) => {
+            const id = req.params.id;
+            const query = { _id: ObjectId(id) };
+            const result = await doctorsCollection.deleteOne(query);
+            res.send(result);
+        })
 
+        app.get('/treatments', async (req, res) => {
+            const query = {};
+            const cursor = appointmentOptions.find(query).project({ name: 1 });
+            const result = await cursor.toArray();
+            res.send(result);
+        })
 
     }
     finally { }
