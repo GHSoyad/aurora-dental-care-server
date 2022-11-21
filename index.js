@@ -11,13 +11,11 @@ app.use(express.json());
 const verifyJWT = (req, res, next) => {
 
     const authHeader = req.headers.authorization;
-
     if (!authHeader) {
         return res.status(401).send({ message: "Unauthorized Access" })
     }
 
     const token = authHeader.split(' ')[1];
-
     jwt.verify(token, process.env.ACCESS_TOKEN, function (err, decoded) {
         if (err) {
             return res.status(403).send({ message: "Forbidden Access" })
@@ -43,6 +41,7 @@ async function run() {
         const appointmentOptions = client.db('aurora-dental-care').collection('appointmentOptions');
         const bookingCollection = client.db('aurora-dental-care').collection('bookings');
         const usersCollection = client.db('aurora-dental-care').collection('users');
+        const doctorsCollection = client.db('aurora-dental-care').collection('doctors');
 
         const verifyAdmin = async (req, res, next) => {
             const email = req.decoded.email;
@@ -118,7 +117,6 @@ async function run() {
         })
 
         app.patch('/users/:id', verifyJWT, verifyAdmin, async (req, res) => {
-
             const id = req.params.id;
             const filter = { _id: ObjectId(id) };
             const updateUser = {
@@ -136,6 +134,26 @@ async function run() {
             const result = await usersCollection.findOne(query);
             res.send({ isAdmin: result?.role === 'admin' });
         })
+
+        app.post('/doctors', async (req, res) => {
+            const doctor = req.body;
+            const query = { email: doctor.email }
+            const checkDoctor = await doctorsCollection.findOne(query);
+            if (checkDoctor) {
+                return res.send({ message: 'Doctor email exists.' })
+            }
+            const result = await doctorsCollection.insertOne(doctor);
+            res.send(result);
+        })
+
+        app.get('/doctors', async (req, res) => {
+            const query = {};
+            const cursor = doctorsCollection.find(query);
+            const result = await cursor.toArray();
+            res.send(result);
+        })
+
+
 
     }
     finally { }
