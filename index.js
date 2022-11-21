@@ -44,6 +44,16 @@ async function run() {
         const bookingCollection = client.db('aurora-dental-care').collection('bookings');
         const usersCollection = client.db('aurora-dental-care').collection('users');
 
+        const verifyAdmin = async (req, res, next) => {
+            const email = req.decoded.email;
+            const query = { email: email };
+            const user = await usersCollection.findOne(query);
+            if (user?.role !== 'admin') {
+                return res.status(403).send({ message: "Forbidden Access" })
+            }
+            next();
+        }
+
         app.get('/appointmentsOptions', async (req, res) => {
             const date = req.query.date;
             const query = {};
@@ -107,13 +117,8 @@ async function run() {
             res.send(result);
         })
 
-        app.patch('/users/:id', verifyJWT, async (req, res) => {
-            const email = req.decoded.email;
-            const query = { email: email };
-            const user = await usersCollection.findOne(query);
-            if (user?.role !== 'admin') {
-                return res.status(403).send({ message: "Forbidden Access" })
-            }
+        app.patch('/users/:id', verifyJWT, verifyAdmin, async (req, res) => {
+
             const id = req.params.id;
             const filter = { _id: ObjectId(id) };
             const updateUser = {
@@ -123,6 +128,13 @@ async function run() {
             }
             const result = await usersCollection.updateOne(filter, updateUser);
             res.send(result);
+        })
+
+        app.get('/users/admin/:email', async (req, res) => {
+            const email = req.params.email;
+            const query = { email: email };
+            const result = await usersCollection.findOne(query);
+            res.send({ isAdmin: result?.role === 'admin' });
         })
 
     }
