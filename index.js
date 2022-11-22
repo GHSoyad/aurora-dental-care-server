@@ -88,6 +88,21 @@ async function run() {
             res.send(result);
         })
 
+        app.get('/bookings', verifyJWT, verifyAdmin, async (req, res) => {
+            const query = {};
+            const cursor = bookingCollection.find(query);
+            const result = await cursor.toArray();
+            res.send(result);
+        })
+
+        app.get('/my-appointments', verifyJWT, async (req, res) => {
+            const email = req.query.email;
+            const query = { userEmail: email };
+            const cursor = bookingCollection.find(query);
+            const result = await cursor.toArray();
+            res.send(result);
+        })
+
         app.post('/users', async (req, res) => {
             const user = req.body;
             const result = await usersCollection.insertOne(user);
