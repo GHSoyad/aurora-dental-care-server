@@ -4,6 +4,7 @@ const port = process.env.PORT || 5000;
 const cors = require('cors');
 require('dotenv').config();
 const jwt = require('jsonwebtoken');
+const stripe = require('stripe')(process.env.STRIPE_SECRET_KEY);
 
 app.use(cors());
 app.use(express.json());
@@ -31,6 +32,22 @@ app.get('/jwt', (req, res) => {
     res.send({ token });
 })
 
+app.post('/create-payment-intent', async (req, res) => {
+    const booking = req.body;
+    const amount = parseFloat(booking.cost) * 100;
+    const paymentIntent = await stripe.paymentIntents.create({
+        amount: amount,
+        currency: 'usd',
+        payment_method_types: [
+            "card"
+        ],
+    })
+
+    res.send({
+        clientSecret: paymentIntent.client_secret
+    })
+})
+
 const { MongoClient, ServerApiVersion, ObjectId } = require('mongodb');
 const uri = `mongodb+srv://${process.env.DB_USER}:${process.env.DB_PASSWORD}@cluster0.7r6jn89.mongodb.net/?retryWrites=true&w=majority`;
 const client = new MongoClient(uri, { useNewUrlParser: true, useUnifiedTopology: true, serverApi: ServerApiVersion.v1 });
@@ -42,6 +59,7 @@ async function run() {
         const bookingCollection = client.db('aurora-dental-care').collection('bookings');
         const usersCollection = client.db('aurora-dental-care').collection('users');
         const doctorsCollection = client.db('aurora-dental-care').collection('doctors');
+        const paymentsCollection = client.db('aurora-dental-care').collection('payments');
 
         const verifyAdmin = async (req, res, next) => {
             const email = req.decoded.email;
@@ -92,6 +110,13 @@ async function run() {
             const query = {};
             const cursor = bookingCollection.find(query);
             const result = await cursor.toArray();
+            res.send(result);
+        })
+
+        app.get('/booking/:id', verifyJWT, async (req, res) => {
+            const id = req.params.id;
+            const query = { _id: ObjectId(id) };
+            const result = await bookingCollection.findOne(query);
             res.send(result);
         })
 
@@ -179,6 +204,21 @@ async function run() {
             const query = {};
             const cursor = appointmentOptions.find(query).project({ name: 1 });
             const result = await cursor.toArray();
+            res.send(result);
+        })
+
+        app.post('/payments', verifyJWT, async (req, res) => {
+            const payment = req.body;
+            const result = await paymentsCollection.insertOne(payment);
+            const filter = { _id: ObjectId(payment.bookingId) };
+            const transactionId = payment.transactionId;
+            const updateBooking = {
+                $set: {
+                    payment: true,
+                    transactionId
+                }
+            }
+            const updatedResult = await bookingCollection.updateOne(filter, updateBooking);
             res.send(result);
         })
 
